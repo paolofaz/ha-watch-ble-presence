@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.1 — Fix BLE presence timestamp attribute
+## 2.0.2 — Fix BLE presence timestamp attribute
 
 Bugfix release restoring compatibility with Home Assistant presence automations.
 
