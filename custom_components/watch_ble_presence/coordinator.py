@@ -101,7 +101,7 @@ class WatchBleCoordinator(DataUpdateCoordinator[dict[str, WatchState]]):
             detected = age_seconds is not None and age_seconds <= self.presence_timeout
             new_states[watch.watch_id] = WatchState(
                 detected=detected, last_seen=last_seen, age_seconds=age_seconds,
-                rssi=rssi, source=source, scanner_name=scanner_name,
+                rssi=rssi if detected else None, source=source, scanner_name=scanner_name,
                 address=address, bluetooth_name=bluetooth_name,
             )
         self._states = new_states
