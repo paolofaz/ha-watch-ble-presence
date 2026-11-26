@@ -1,5 +1,7 @@
 # Watch BLE Presence
 
+[![Release](https://img.shields.io/github/v/release/paolofaz/ha-watch-ble-presence)](https://github.com/paolofaz/ha-watch-ble-presence/releases/latest)
+
 A Home Assistant custom integration for monitoring Apple Watch presence using each Watch's own **Identity Resolving Key (IRK)**. No Private BLE Device integration required.
 
 ## How it works
@@ -20,6 +22,8 @@ Each Watch has seven entities, preserving the same names and entity keys as Watc
 - BLE address
 - Bluetooth name
 
+Since v2.0.3, RSSI is unavailable when the Watch is no longer detected; removing a Watch also cleans up its obsolete integration-owned registry entries.
+
 Presence timeout and polling interval are configurable. Defaults are 300 seconds for presence timeout and 60 seconds for polling; polling can be set as low as 10 seconds.
 
 ## Requirements
@@ -34,7 +38,7 @@ Install Watch BLE Presence as a HACS custom repository integration, or copy `cus
 
 Enter the first Watch's name and IRK during setup. Use **Configure → Add a Watch** for additional watches, or **Configure → Remove a Watch** to remove a device. **Presence settings** changes the timeout and update interval.
 
-**Important:** If you are already using the independent v1.1 or v1.2 beta with configured Watches, upgrade the integration **in place**, without removing its config entry. All existing Watch IDs, IRKs, entity IDs and options are retained. Home Assistant's internal config-entry schema remains version 2; the integration release is v2.0.0.
+**Important:** If you are already using the independent v1.1 or v1.2 beta with configured Watches, upgrade the integration **in place**, without removing its config entry. All existing Watch IDs, IRKs, entity IDs and options are retained. Home Assistant's internal config-entry schema remains version 2; the current stable release is shown by the badge above.
 
 **Breaking change in v2.0:** The old Private BLE Device migration wizard was removed. Direct upgrades from the original v1.0 entry (which did not store IRKs) are unsupported; back up your configuration, remove the old v1.0 integration entry and set up v2.0 with your own IRKs. Reusing the old Watch name alone does **not** guarantee the same entity ID. Existing independent v1.1/v1.2-beta entries keep their configured Watch IDs and entity IDs.
 
