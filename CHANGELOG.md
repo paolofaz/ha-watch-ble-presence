@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.3 — 2026-11-26
+
+- Clear stale RSSI after the configured presence timeout.
+- Remove orphaned watch devices and entities belonging to this integration.
+
+
 ## 2.0.2 — Fix BLE presence timestamp attribute
 
 Bugfix release restoring compatibility with Home Assistant presence automations.
