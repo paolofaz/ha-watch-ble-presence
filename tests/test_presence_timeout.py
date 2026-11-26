@@ -109,6 +109,8 @@ class PresenceTimeoutTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(states["1"].age_seconds, 12)
         self.assertEqual(states["1"].scanner_name, "Proxy one")
         self.assertEqual(states["1"].rssi, -64)
+        self.assertIsNone(states["3"].rssi)
+        self.assertIsNone(states["4"].rssi)
         self.assertIsNone(states["4"].last_seen)
 
 
