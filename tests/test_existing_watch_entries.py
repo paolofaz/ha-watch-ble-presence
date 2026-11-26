@@ -48,6 +48,11 @@ def load_integration_and_entity():
     helpers = types.ModuleType("homeassistant.helpers")
     dr = types.ModuleType("homeassistant.helpers.device_registry")
     dr.DeviceInfo = lambda **kwargs: kwargs
+    dr.async_get = lambda hass: hass.devices
+    dr.async_entries_for_config_entry = lambda registry, entry_id: registry.entries
+    er = types.ModuleType("homeassistant.helpers.entity_registry")
+    er.async_get = lambda hass: hass.entities
+    er.async_entries_for_device = lambda registry, device_id, include_disabled_entities: [e for e in registry.entries if e.device_id == device_id]
     update = types.ModuleType("homeassistant.helpers.update_coordinator")
 
     class CoordinatorEntity:
@@ -59,6 +64,7 @@ def load_integration_and_entity():
 
     update.CoordinatorEntity = CoordinatorEntity
     helpers.device_registry = dr
+    helpers.entity_registry = er
     helpers.update_coordinator = update
     modules = {
         package_name: package,
@@ -69,6 +75,7 @@ def load_integration_and_entity():
         "homeassistant.core": core,
         "homeassistant.helpers": helpers,
         "homeassistant.helpers.device_registry": dr,
+        "homeassistant.helpers.entity_registry": er,
         "homeassistant.helpers.update_coordinator": update,
     }
 
@@ -112,12 +119,13 @@ class ExistingEntryTests(unittest.IsolatedAsyncioTestCase):
         ]
         original = {"watches": watches}
         entry = types.SimpleNamespace(
+            entry_id="test-entry",
             version=2,
             data={"watches": [dict(watch) for watch in watches]},
             options={"update_interval": 15, "presence_timeout": 300},
             runtime_data=None,
         )
-        hass = types.SimpleNamespace(config_entries=FakeConfigEntries())
+        hass = types.SimpleNamespace(config_entries=FakeConfigEntries(), devices=types.SimpleNamespace(entries=[]), entities=types.SimpleNamespace(entries=[]))
 
         self.assertFalse(hasattr(integration, "async_migrate_entry"))
         self.assertTrue(await integration.async_setup_entry(hass, entry))
@@ -141,10 +149,29 @@ class ExistingEntryTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_empty_independent_entry_is_valid(self):
         integration, _ = load_integration_and_entity()
-        entry = types.SimpleNamespace(data={"watches": []}, options={})
-        hass = types.SimpleNamespace(config_entries=FakeConfigEntries())
+        entry = types.SimpleNamespace(entry_id="test-entry", data={"watches": []}, options={})
+        hass = types.SimpleNamespace(config_entries=FakeConfigEntries(), devices=types.SimpleNamespace(entries=[]), entities=types.SimpleNamespace(entries=[]))
         self.assertTrue(await integration.async_setup_entry(hass, entry))
         self.assertEqual(entry.runtime_data.watches, [])
+
+    async def test_only_removed_watch_registry_entries_are_deleted(self):
+        integration, _ = load_integration_and_entity()
+        active = types.SimpleNamespace(id="active", identifiers={("watch_ble_presence", "kept")}, config_entries={"test-entry"})
+        removed = types.SimpleNamespace(id="removed", identifiers={("watch_ble_presence", "gone")}, config_entries={"test-entry"})
+        shared = types.SimpleNamespace(id="shared", identifiers={("watch_ble_presence", "shared-gone")}, config_entries={"test-entry", "other"})
+        deleted_devices, detached, deleted_entities = [], [], []
+        devices = types.SimpleNamespace(entries=[active, removed, shared], async_remove_device=deleted_devices.append,
+            async_update_device=lambda device_id, **kw: detached.append((device_id, kw)))
+        entities = types.SimpleNamespace(entries=[
+            types.SimpleNamespace(device_id="removed", entity_id="sensor.old", config_entry_id="test-entry", platform="watch_ble_presence"),
+            types.SimpleNamespace(device_id="shared", entity_id="sensor.shared", config_entry_id="test-entry", platform="watch_ble_presence"),
+            types.SimpleNamespace(device_id="shared", entity_id="sensor.other", config_entry_id="other", platform="other"),
+        ], async_remove=deleted_entities.append)
+        integration._remove_orphan_watches(types.SimpleNamespace(devices=devices, entities=entities),
+            types.SimpleNamespace(entry_id="test-entry"), {"kept"})
+        self.assertEqual(deleted_devices, ["removed"])
+        self.assertEqual(detached, [("shared", {"remove_config_entry_id": "test-entry"})])
+        self.assertCountEqual(deleted_entities, ["sensor.old", "sensor.shared"])
 
 
 if __name__ == "__main__":
